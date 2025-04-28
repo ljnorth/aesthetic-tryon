@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.797.0",
+    "@aws-sdk/util-dynamodb": "^3.797.0",
     "@radix-ui/react-dialog": "^1.1.11",
     "@radix-ui/react-primitive": "^2.1.0",
     "@radix-ui/react-slot": "^1.2.0",
@@ -20,6 +22,7 @@
     "lucide-react": "^0.503.0",
     "next": "15.3.0",
     "openai": "^4.96.0",
+    "papaparse": "^5.5.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.2.0"
