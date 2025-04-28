@@ -11,32 +11,44 @@ const supabase = createClient(
 );
 
 // Initialize OpenAI client
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+// Handle CORS preflight request
 export async function OPTIONS() {
-  // Respond to preflight CORS request
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*', // or you can put your specific domain here
+      'Access-Control-Allow-Origin': '*', // Or your specific Lovable domain
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
 }
 
+// Handle actual POST request
 export async function POST(request: Request) {
   try {
     const { products }: { products: { id: string; category: string }[] } = await request.json();
 
     if (!products || products.length === 0) {
-      return NextResponse.json({ error: 'No products provided.' }, { status: 400 });
+      return new NextResponse(
+        JSON.stringify({ error: 'No products provided.' }),
+        {
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        }
+      );
     }
 
+    // Fetch product images from Supabase
     const ids = products.map((p) => p.id);
     const { data: records, error: fetchError } = await supabase
       .from('product_catalog')
-      .select('id, image_url')
+      .select('id, hosted_image_url')
       .in('id', ids);
 
     if (fetchError) {
@@ -45,7 +57,7 @@ export async function POST(request: Request) {
 
     const idToUrl: Record<string, string> = {};
     (records || []).forEach((rec) => {
-      if (rec.id && rec.image_url) idToUrl[rec.id] = rec.image_url;
+      if (rec.id && rec.hosted_image_url) idToUrl[rec.id] = rec.hosted_image_url;
     });
 
     const images = products
@@ -53,37 +65,61 @@ export async function POST(request: Request) {
       .filter((url): url is string => Boolean(url));
 
     if (images.length === 0) {
-      return NextResponse.json({ error: 'No valid images found for provided product IDs.' }, { status: 400 });
+      return new NextResponse(
+        JSON.stringify({ error: 'No valid images found for provided product IDs.' }),
+        {
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          },
+        }
+      );
     }
 
-    const textPrompt = 
-      'Create a high-fashion editorial moodboard with these items on a clean white background: ' +
-      images.join('; ');
+    // Build the prompt
+    const textPrompt = `Create a high-end fashion editorial moodboard with the following items shown cleanly on a white background: ${images.join('; ')}`;
 
-    const response = await openai.images.generate({
+    // Call OpenAI (gpt-image-1 model)
+    const openaiResponse = await openai.images.generate({
       model: 'gpt-image-1',
       prompt: textPrompt,
       size: '1024x1024',
       quality: 'high',
+      response_format: 'url',
       n: 1,
     });
 
-    const imageUrl = response.data?.[0]?.url;
+    const imageUrl = openaiResponse.data?.[0]?.url;
+
     if (!imageUrl) {
-      throw new Error('OpenAI did not return an image URL.');
+      throw new Error('OpenAI did not return a valid image URL.');
     }
 
-    const res = NextResponse.json({ image_url: imageUrl });
-    res.headers.set('Access-Control-Allow-Origin', '*');
-    res.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-    return res;
+    return new NextResponse(
+      JSON.stringify({ image_url: imageUrl }),
+      {
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      }
+    );
   } catch (err: any) {
     console.error('Error in create-moodboard route:', err);
-    const res = NextResponse.json({ error: err.message || 'Internal server error.' }, { status: 500 });
-    res.headers.set('Access-Control-Allow-Origin', '*');
-    res.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-    return res;
+    return new NextResponse(
+      JSON.stringify({ error: err.message || 'Internal server error.' }),
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      }
+    );
   }
 }
