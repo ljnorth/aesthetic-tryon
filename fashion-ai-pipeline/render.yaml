@@ -1,0 +1,22 @@
+services:
+  - type: worker
+    name: download-images
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python download_images.py
+    envVars:
+      - key: SUPABASE_URL
+        fromDotEnv: true
+      - key: SUPABASE_SERVICE_KEY
+        fromDotEnv: true
+
+  - type: worker
+    name: remove-background
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python remove_background.py
+    envVars:
+      - key: SUPABASE_URL
+        fromDotEnv: true
+      - key: SUPABASE_SERVICE_KEY
+        fromDotEnv: true
