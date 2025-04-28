@@ -15,10 +15,10 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 // Handle CORS preflight request
 export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
+  return NextResponse.json({}, {
+    status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*', // Or your specific Lovable domain
+      'Access-Control-Allow-Origin': '*', // safer later to lock this down
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
@@ -31,17 +31,14 @@ export async function POST(request: Request) {
     const { products }: { products: { id: string; category: string }[] } = await request.json();
 
     if (!products || products.length === 0) {
-      return new NextResponse(
-        JSON.stringify({ error: 'No products provided.' }),
-        {
-          status: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          },
-        }
-      );
+      return NextResponse.json({ error: 'No products provided.' }, {
+        status: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
     }
 
     // Fetch product images from Supabase
@@ -65,17 +62,14 @@ export async function POST(request: Request) {
       .filter((url): url is string => Boolean(url));
 
     if (images.length === 0) {
-      return new NextResponse(
-        JSON.stringify({ error: 'No valid images found for provided product IDs.' }),
-        {
-          status: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          },
-        }
-      );
+      return NextResponse.json({ error: 'No valid images found for provided product IDs.' }, {
+        status: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
     }
 
     // Build the prompt
@@ -97,29 +91,24 @@ export async function POST(request: Request) {
       throw new Error('OpenAI did not return a valid image URL.');
     }
 
-    return new NextResponse(
-      JSON.stringify({ image_url: imageUrl }),
-      {
-        status: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      }
-    );
+    return NextResponse.json({ image_url: imageUrl }, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+
   } catch (err: any) {
     console.error('Error in create-moodboard route:', err);
-    return new NextResponse(
-      JSON.stringify({ error: err.message || 'Internal server error.' }),
-      {
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      }
-    );
+    return NextResponse.json({ error: err.message || 'Internal server error.' }, {
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
   }
 }
